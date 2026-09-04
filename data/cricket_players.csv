@@ -1,0 +1,21 @@
+PLAYER_ID,FIRST_NAME,LAST_NAME,NATIONALITY,BATTING_STYLE,BOWLING_STYLE,ROLE,CURRENT_TEAM_ID,CONTRACT_START,STATUS,UPDATED_AT
+P0001,Ruturaj,Gaikwad,IND,Right-hand bat,Off spin,Batter,T001,2023-12-01,ACTIVE,2026-01-01 09:00:00
+P0002,Ravindra,Jadeja,IND,Left-hand bat,Left-arm spin,All-rounder,T001,2023-12-01,ACTIVE,2026-01-01 09:01:00
+P0003,MS,Dhoni,IND,Right-hand bat,Wicketkeeper,Wicketkeeper,T001,2023-12-01,ACTIVE,2026-01-01 09:02:00
+P0004,Rohit,Sharma,IND,Right-hand bat,Off spin,Batter,T002,2023-12-01,ACTIVE,2026-01-01 09:03:00
+P0005,Jasprit,Bumrah,IND,Right-hand bat,Fast,Bowler,T002,2023-12-01,ACTIVE,2026-01-01 09:04:00
+P0006,Hardik,Pandya,IND,Right-hand bat,Medium-fast,All-rounder,T002,2023-12-01,ACTIVE,2026-01-01 09:05:00
+P0007,Virat,Kohli,IND,Right-hand bat,None,Batter,T003,2023-12-01,ACTIVE,2026-01-01 09:06:00
+P0008,Glenn,Maxwell,AUS,Right-hand bat,Off spin,All-rounder,T003,2023-12-01,ACTIVE,2026-01-01 09:07:00
+P0009,Mohammed,Siraj,IND,Right-hand bat,Fast,Bowler,T003,2023-12-01,ACTIVE,2026-01-01 09:08:00
+P0010,Shreyas,Iyer,IND,Right-hand bat,None,Batter,T004,2023-12-01,ACTIVE,2026-01-01 09:09:00
+P0011,Andre,Russell,WI,Right-hand bat,Fast,All-rounder,T004,2023-12-01,ACTIVE,2026-01-01 09:10:00
+P0012,Sunil,Narine,WI,Left-hand bat,Off spin,All-rounder,T004,2023-12-01,ACTIVE,2026-01-01 09:11:00
+P0013,Rishabh,Pant,IND,Left-hand bat,Wicketkeeper,Wicketkeeper,T005,2023-12-01,ACTIVE,2026-01-01 09:12:00
+P0014,Kuldeep,Yadav,IND,Left-hand bat,Chinaman,Bowler,T005,2023-12-01,ACTIVE,2026-01-01 09:13:00
+P0015,David,Warner,AUS,Left-hand bat,None,Batter,T005,2023-12-01,ACTIVE,2026-01-01 09:14:00
+P0016,Pat,Cummins,AUS,Right-hand bat,Fast,Bowler,T006,2023-12-01,ACTIVE,2026-01-01 09:15:00
+P0017,Bhuvneshwar,Kumar,IND,Right-hand bat,Swing,Bowler,T006,2023-12-01,ACTIVE,2026-01-01 09:16:00
+P0018,Heinrich,Klaasen,SA,Right-hand bat,Wicketkeeper,Wicketkeeper,T006,2023-12-01,ACTIVE,2026-01-01 09:17:00
+P0019,Sanju,Samson,IND,Right-hand bat,Wicketkeeper,Wicketkeeper,T007,2023-12-01,ACTIVE,2026-01-01 09:18:00
+P0020,Yuzvendra,Chahal,IND,Right-hand bat,Leg spin,Bowler,T007,2023-12-01,ACTIVE,2026-01-01 09:19:00

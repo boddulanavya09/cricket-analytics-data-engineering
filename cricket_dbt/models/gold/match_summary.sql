@@ -1,0 +1,16 @@
+SELECT
+    MATCH_ID,
+    COMPETITION,
+    FORMAT,
+    MATCH_DATE,
+    VENUE_ID,
+    TEAM_A_ID,
+    TEAM_B_ID,
+    TOSS_WINNER_TEAM_ID,
+    TOSS_DECISION,
+    WINNER_TEAM_ID,
+    RESULT_TYPE,
+    RESULT_MARGIN,
+    MATCH_STATUS,
+    UPDATED_AT
+FROM {{ ref('stg_cricket_matches') }}

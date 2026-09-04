@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# dbt
+cricket_dbt/target/
+cricket_dbt/dbt_packages/
+cricket_dbt/logs/
+
+# Airflow
+airflow/logs/
+airflow/.env
+
+# Snowflake / dbt credentials
+profiles.yml
+**/profiles.yml
+
+# Environment files
+.env
+*.env
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

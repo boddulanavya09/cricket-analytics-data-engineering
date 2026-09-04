@@ -1,0 +1,84 @@
+version: 2
+
+models:
+
+  - name: stg_cricket_matches
+    description: "Cleaned cricket match data"
+    columns:
+      - name: MATCH_ID
+        description: "Unique identifier for each match"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: TEAM_A_ID
+        description: "First team participating in the match"
+        data_tests:
+          - not_null
+
+      - name: TEAM_B_ID
+        description: "Second team participating in the match"
+        data_tests:
+          - not_null
+
+      - name: MATCH_DATE
+        description: "Date of the match"
+        data_tests:
+          - not_null
+
+  - name: stg_cricket_deliveries
+    description: "Cleaned ball-by-ball cricket delivery data"
+    columns:
+      - name: DELIVERY_ID
+        description: "Unique identifier for each delivery"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: MATCH_ID
+        description: "Match associated with the delivery"
+        data_tests:
+          - not_null
+
+      - name: BOWLER_PLAYER_ID
+        description: "Bowler who delivered the ball"
+        data_tests:
+          - not_null
+
+      - name: STRIKER_PLAYER_ID
+        description: "Batter facing the delivery"
+        data_tests:
+          - not_null
+
+  - name: stg_cricket_players
+    description: "Cleaned cricket player data"
+    columns:
+      - name: PLAYER_ID
+        description: "Unique identifier for each player"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: FIRST_NAME
+        description: "Player first name"
+        data_tests:
+          - not_null
+
+      - name: LAST_NAME
+        description: "Player last name"
+        data_tests:
+          - not_null
+
+  - name: stg_cricket_teams
+    description: "Cleaned cricket team data"
+    columns:
+      - name: TEAM_ID
+        description: "Unique identifier for each team"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: TEAM_NAME
+        description: "Name of the cricket team"
+        data_tests:
+          - not_null
