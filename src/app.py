@@ -14,16 +14,8 @@ st.set_page_config(
     layout="wide"
 )
 
-
-# =========================================================
-# TITLE
-# =========================================================
-
 st.title("🏏 Cricket Analytics Dashboard")
-
-st.markdown(
-    "### Interactive Cricket Performance Analysis"
-)
+st.markdown("### Interactive Cricket Performance Analysis")
 
 st.divider()
 
@@ -61,6 +53,7 @@ def load_matches(_conn):
             COMPETITION,
             FORMAT,
             MATCH_DATE,
+            VENUE_ID,
             TEAM_A_ID,
             TEAM_B_ID,
             WINNER_TEAM_ID,
@@ -73,46 +66,12 @@ def load_matches(_conn):
     return pd.read_sql(query, _conn)
 
 
-matches = load_matches(conn)
-
-
 # =========================================================
-# LOAD TEAM ANALYTICS
+# LOAD PLAYER DATA
 # =========================================================
 
 @st.cache_data
-def load_team_analytics(_conn):
-
-    query = """
-        SELECT
-            TEAM_ID,
-            TEAM_NAME,
-            TEAM_CODE,
-            COUNTRY,
-            COMPETITION,
-            REGION,
-            MATCHES_PLAYED,
-            WINS,
-            LOSSES,
-            TOSS_WINS,
-            NO_RESULTS,
-            WIN_PERCENTAGE
-        FROM CRICKET_ANALYTICS.GOLD.TEAM_ANALYTICS
-        ORDER BY WINS DESC
-    """
-
-    return pd.read_sql(query, _conn)
-
-
-teams = load_team_analytics(conn)
-
-
-# =========================================================
-# LOAD PLAYER ANALYTICS
-# =========================================================
-
-@st.cache_data
-def load_player_analytics(_conn):
+def load_players(_conn):
 
     query = """
         SELECT
@@ -136,7 +95,73 @@ def load_player_analytics(_conn):
     return pd.read_sql(query, _conn)
 
 
-players = load_player_analytics(conn)
+# =========================================================
+# LOAD TEAM DATA
+# =========================================================
+
+@st.cache_data
+def load_teams(_conn):
+
+    query = """
+        SELECT
+            TEAM_ID,
+            TEAM_NAME,
+            TEAM_CODE,
+            COUNTRY,
+            COMPETITION,
+            REGION,
+            MATCHES_PLAYED,
+            WINS,
+            LOSSES,
+            TOSS_WINS,
+            NO_RESULTS,
+            WIN_PERCENTAGE
+        FROM CRICKET_ANALYTICS.GOLD.TEAM_ANALYTICS
+    """
+
+    return pd.read_sql(query, _conn)
+
+
+# =========================================================
+# LOAD DELIVERY DATA
+# =========================================================
+
+@st.cache_data
+def load_deliveries(_conn):
+
+    query = """
+        SELECT
+            DELIVERY_ID,
+            MATCH_ID,
+            INNINGS_NO,
+            OVER_NO,
+            BALL_NO,
+            BATTING_TEAM_ID,
+            BOWLING_TEAM_ID,
+            STRIKER_PLAYER_ID,
+            NON_STRIKER_PLAYER_ID,
+            BOWLER_PLAYER_ID,
+            BATSMAN_RUNS,
+            WIDES,
+            NO_BALLS,
+            BYES,
+            LEG_BYES,
+            TOTAL_RUNS,
+            IS_WICKET,
+            DISMISSAL_TYPE,
+            IS_FOUR,
+            IS_SIX,
+            IS_DOT_BALL
+        FROM CRICKET_ANALYTICS.SILVER.STG_CRICKET_DELIVERIES
+    """
+
+    return pd.read_sql(query, _conn)
+
+
+matches = load_matches(conn)
+players = load_players(conn)
+teams = load_teams(conn)
+deliveries = load_deliveries(conn)
 
 
 # =========================================================
@@ -145,51 +170,51 @@ players = load_player_analytics(conn)
 
 st.sidebar.header("🔎 Dashboard Filters")
 
+competition_options = ["All"] + sorted(
+    matches["COMPETITION"]
+    .dropna()
+    .astype(str)
+    .unique()
+    .tolist()
+)
 
-competitions = ["All"]
+format_options = ["All"] + sorted(
+    matches["FORMAT"]
+    .dropna()
+    .astype(str)
+    .unique()
+    .tolist()
+)
 
-if "COMPETITION" in matches.columns:
-
-    competitions += sorted(
-        matches["COMPETITION"]
-        .dropna()
-        .astype(str)
-        .unique()
-        .tolist()
-    )
-
-
-formats = ["All"]
-
-if "FORMAT" in matches.columns:
-
-    formats += sorted(
-        matches["FORMAT"]
-        .dropna()
-        .astype(str)
-        .unique()
-        .tolist()
-    )
-
+match_options = ["All"] + sorted(
+    matches["MATCH_ID"]
+    .dropna()
+    .astype(str)
+    .unique()
+    .tolist()
+)
 
 selected_competition = st.sidebar.selectbox(
     "🏆 Competition",
-    competitions
+    competition_options
 )
-
 
 selected_format = st.sidebar.selectbox(
     "🏏 Format",
-    formats
+    format_options
+)
+
+selected_match = st.sidebar.selectbox(
+    "🏏 Match",
+    match_options
 )
 
 
 # =========================================================
-# APPLY FILTERS
+# APPLY GLOBAL FILTERS
 # =========================================================
 
 filtered_matches = matches.copy()
-
 
 if selected_competition != "All":
 
@@ -198,7 +223,6 @@ if selected_competition != "All":
         == selected_competition
     ]
 
-
 if selected_format != "All":
 
     filtered_matches = filtered_matches[
@@ -206,281 +230,435 @@ if selected_format != "All":
         == selected_format
     ]
 
+if selected_match != "All":
+
+    filtered_matches = filtered_matches[
+        filtered_matches["MATCH_ID"].astype(str)
+        == selected_match
+    ]
+
 
 # =========================================================
-# KPI SECTION
+# FOUR MAIN SECTIONS
 # =========================================================
 
-st.subheader("📊 Overview")
-
-
-col1, col2, col3, col4 = st.columns(4)
-
-
-col1.metric(
-    "🏏 Total Matches",
-    len(filtered_matches)
+section = st.sidebar.radio(
+    "📂 Select Analysis",
+    [
+        "🏏 Match Overview",
+        "👤 Player Insights",
+        "🏆 Team / Venue Analysis",
+        "🔍 Ball-by-Ball Explorer"
+    ]
 )
 
 
-col2.metric(
-    "✅ Completed Matches",
-    len(
-        filtered_matches[
-            filtered_matches["MATCH_STATUS"]
-            == "COMPLETED"
-        ]
+# =========================================================
+# 1. MATCH OVERVIEW
+# =========================================================
+
+if section == "🏏 Match Overview":
+
+    st.header("🏏 Match Overview")
+
+    if filtered_matches.empty:
+
+        st.warning(
+            "No matches found for the selected filters."
+        )
+
+    else:
+
+        match_ids = filtered_matches["MATCH_ID"].tolist()
+
+        match_deliveries = deliveries[
+            deliveries["MATCH_ID"].isin(match_ids)
+        ].copy()
+
+        # -------------------------------------------------
+        # INNINGS FILTER
+        # -------------------------------------------------
+
+        innings_options = ["All"]
+
+        if not match_deliveries.empty:
+
+            innings_options += sorted(
+                match_deliveries["INNINGS_NO"]
+                .dropna()
+                .unique()
+                .tolist()
+            )
+
+        selected_innings = st.selectbox(
+            "🏏 Select Innings",
+            innings_options
+        )
+
+        if selected_innings != "All":
+
+            match_deliveries = match_deliveries[
+                match_deliveries["INNINGS_NO"]
+                == selected_innings
+            ]
+
+        # -------------------------------------------------
+        # KPI CALCULATIONS
+        # -------------------------------------------------
+
+        total_runs = int(
+            match_deliveries["TOTAL_RUNS"].sum()
+        )
+
+        wickets = int(
+            match_deliveries["IS_WICKET"].sum()
+        )
+
+        balls = len(match_deliveries)
+
+        fours = int(
+            match_deliveries["IS_FOUR"].sum()
+        )
+
+        sixes = int(
+            match_deliveries["IS_SIX"].sum()
+        )
+
+        boundary_runs = (
+            fours * 4
+            +
+            sixes * 6
+        )
+
+        boundary_percentage = (
+            boundary_runs * 100 / total_runs
+            if total_runs > 0
+            else 0
+        )
+
+        run_rate = (
+            total_runs / (balls / 6)
+            if balls > 0
+            else 0
+        )
+
+        # -------------------------------------------------
+        # KPI CARDS
+        # -------------------------------------------------
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        col1.metric(
+            "🏏 Total Runs",
+            total_runs
+        )
+
+        col2.metric(
+            "📈 Run Rate",
+            round(run_rate, 2)
+        )
+
+        col3.metric(
+            "🎯 Wickets",
+            wickets
+        )
+
+        col4.metric(
+            "🔥 Boundary %",
+            f"{boundary_percentage:.2f}%"
+        )
+
+        st.divider()
+
+        # -------------------------------------------------
+        # SCORE PROGRESSION
+        # -------------------------------------------------
+
+        st.subheader("📈 Score Progression")
+
+        if not match_deliveries.empty:
+
+            score_progression = (
+                match_deliveries
+                .groupby(
+                    ["INNINGS_NO", "OVER_NO"]
+                )["TOTAL_RUNS"]
+                .sum()
+                .reset_index()
+            )
+
+            score_progression[
+                "CUMULATIVE_RUNS"
+            ] = (
+                score_progression
+                .groupby("INNINGS_NO")
+                ["TOTAL_RUNS"]
+                .cumsum()
+            )
+
+            score_progression["INNINGS"] = (
+                "Innings "
+                +
+                score_progression[
+                    "INNINGS_NO"
+                ].astype(str)
+            )
+
+            fig = px.line(
+                score_progression,
+                x="OVER_NO",
+                y="CUMULATIVE_RUNS",
+                color="INNINGS",
+                markers=True,
+                title="Score Progression"
+            )
+
+            fig.update_layout(
+                xaxis_title="Over",
+                yaxis_title="Cumulative Runs"
+            )
+
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
+
+        # -------------------------------------------------
+        # RUNS BY OVER
+        # -------------------------------------------------
+
+        st.subheader("📊 Runs by Over")
+
+        over_runs = (
+            match_deliveries
+            .groupby("OVER_NO")
+            ["TOTAL_RUNS"]
+            .sum()
+            .reset_index()
+        )
+
+        fig = px.bar(
+            over_runs,
+            x="OVER_NO",
+            y="TOTAL_RUNS",
+            text="TOTAL_RUNS",
+            title="Runs Scored by Over"
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+
+
+# =========================================================
+# 2. PLAYER INSIGHTS
+# =========================================================
+
+elif section == "👤 Player Insights":
+
+    st.header("👤 Player Insights")
+
+    # -----------------------------------------------------
+    # TOP BATTERS
+    # -----------------------------------------------------
+
+    st.subheader("🏏 Top Batters")
+
+    batter_data = players.copy()
+
+    batter_data["PLAYER"] = (
+        batter_data["FIRST_NAME"]
+        + " "
+        + batter_data["LAST_NAME"]
     )
-)
 
+    batter_data["STRIKE_RATE"] = (
+        batter_data["TOTAL_RUNS"] * 100
+        /
+        batter_data["BALLS_FACED"].replace(
+            0,
+            pd.NA
+        )
+    )
 
-col3.metric(
-    "🏆 Matches With Winner",
-    filtered_matches[
-        "WINNER_TEAM_ID"
-    ].notna().sum()
-)
+    batter_data["STRIKE_RATE"] = (
+        batter_data["STRIKE_RATE"]
+        .fillna(0)
+        .round(2)
+    )
 
-
-col4.metric(
-    "📅 Competitions",
-    filtered_matches[
-        "COMPETITION"
-    ].nunique()
-)
-
-
-st.divider()
-
-
-# =========================================================
-# MATCH DETAILS
-# =========================================================
-
-st.subheader("🏏 Match Details")
-
-
-if not filtered_matches.empty:
+    top_batters = (
+        batter_data
+        .sort_values(
+            "TOTAL_RUNS",
+            ascending=False
+        )
+        .head(10)
+    )
 
     st.dataframe(
-        filtered_matches,
+        top_batters[
+            [
+                "PLAYER",
+                "TOTAL_RUNS",
+                "STRIKE_RATE",
+                "FOURS",
+                "SIXES"
+            ]
+        ],
         use_container_width=True,
         hide_index=True
     )
 
-else:
-
-    st.warning("No matches found for the selected filters.")
-
-
-st.divider()
-
-
-# =========================================================
-# CHART ROW 1
-# =========================================================
-
-st.subheader("📊 Match Distribution")
-
-
-chart_col1, chart_col2 = st.columns(2)
-
-
-# ---------------------------------------------------------
-# MATCHES BY COMPETITION
-# ---------------------------------------------------------
-
-with chart_col1:
-
-    competition_counts = (
-        filtered_matches
-        .groupby("COMPETITION")
-        .size()
-        .reset_index(name="MATCHES")
+    fig = px.bar(
+        top_batters.sort_values(
+            "TOTAL_RUNS"
+        ),
+        x="TOTAL_RUNS",
+        y="PLAYER",
+        orientation="h",
+        text="TOTAL_RUNS",
+        title="Top 10 Run Scorers"
     )
 
-
-    if not competition_counts.empty:
-
-        fig = px.bar(
-            competition_counts,
-            x="COMPETITION",
-            y="MATCHES",
-            text="MATCHES",
-            title="Matches by Competition"
-        )
-
-        fig.update_layout(
-            xaxis_title="Competition",
-            yaxis_title="Number of Matches"
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
-
-
-# ---------------------------------------------------------
-# MATCHES BY FORMAT
-# ---------------------------------------------------------
-
-with chart_col2:
-
-    format_counts = (
-        filtered_matches
-        .groupby("FORMAT")
-        .size()
-        .reset_index(name="MATCHES")
+    st.plotly_chart(
+        fig,
+        use_container_width=True
     )
 
+    st.divider()
 
-    if not format_counts.empty:
+    # -----------------------------------------------------
+    # TOP BOWLERS
+    # -----------------------------------------------------
 
-        fig = px.bar(
-            format_counts,
-            x="FORMAT",
-            y="MATCHES",
-            text="MATCHES",
-            title="Matches by Format"
-        )
+    st.subheader("🎯 Top Bowlers")
 
-        fig.update_layout(
-            xaxis_title="Format",
-            yaxis_title="Number of Matches"
-        )
+    bowler_data = players.copy()
 
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
-
-
-# =========================================================
-# PIE CHARTS
-# =========================================================
-
-st.subheader("🥧 Match Distribution – Pie Charts")
-
-
-pie_col1, pie_col2 = st.columns(2)
-
-
-# ---------------------------------------------------------
-# COMPETITION PIE CHART
-# ---------------------------------------------------------
-
-with pie_col1:
-
-    competition_pie = (
-        filtered_matches
-        .groupby("COMPETITION")
-        .size()
-        .reset_index(name="MATCHES")
+    bowler_data["PLAYER"] = (
+        bowler_data["FIRST_NAME"]
+        + " "
+        + bowler_data["LAST_NAME"]
     )
 
-
-    if not competition_pie.empty:
-
-        fig = px.pie(
-            competition_pie,
-            names="COMPETITION",
-            values="MATCHES",
-            hole=0.35,
-            title="Matches by Competition"
+    bowler_data["ECONOMY"] = (
+        bowler_data["RUNS_CONCEDED"] * 6
+        /
+        bowler_data["BALLS_BOWLED"].replace(
+            0,
+            pd.NA
         )
-
-        fig.update_traces(
-            textposition="inside",
-            textinfo="percent+label"
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
-
-
-# ---------------------------------------------------------
-# FORMAT PIE CHART
-# ---------------------------------------------------------
-
-with pie_col2:
-
-    format_pie = (
-        filtered_matches
-        .groupby("FORMAT")
-        .size()
-        .reset_index(name="MATCHES")
     )
 
+    bowler_data["ECONOMY"] = (
+        bowler_data["ECONOMY"]
+        .fillna(0)
+        .round(2)
+    )
 
-    if not format_pie.empty:
-
-        fig = px.pie(
-            format_pie,
-            names="FORMAT",
-            values="MATCHES",
-            hole=0.35,
-            title="Matches by Format"
+    top_bowlers = (
+        bowler_data
+        .sort_values(
+            "WICKETS",
+            ascending=False
         )
+        .head(10)
+    )
 
-        fig.update_traces(
-            textposition="inside",
-            textinfo="percent+label"
+    st.dataframe(
+        top_bowlers[
+            [
+                "PLAYER",
+                "WICKETS",
+                "ECONOMY",
+                "BALLS_BOWLED",
+                "RUNS_CONCEDED"
+            ]
+        ],
+        use_container_width=True,
+        hide_index=True
+    )
+
+    fig = px.bar(
+        top_bowlers.sort_values(
+            "WICKETS"
+        ),
+        x="WICKETS",
+        y="PLAYER",
+        orientation="h",
+        text="WICKETS",
+        title="Top 10 Wicket Takers"
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
+
+    st.divider()
+
+    # -----------------------------------------------------
+    # PHASE-WISE ANALYSIS
+    # -----------------------------------------------------
+
+    st.subheader("⏱️ Phase-wise Analysis")
+
+    phase_data = deliveries.copy()
+
+    phase_data["PHASE"] = pd.cut(
+        phase_data["OVER_NO"],
+        bins=[-1, 5, 15, 100],
+        labels=[
+            "Powerplay",
+            "Middle Overs",
+            "Death Overs"
+        ]
+    )
+
+    phase_summary = (
+        phase_data
+        .groupby(
+            "PHASE",
+            observed=False
         )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True
+        .agg(
+            RUNS=("TOTAL_RUNS", "sum"),
+            WICKETS=("IS_WICKET", "sum"),
+            BALLS=("DELIVERY_ID", "count")
         )
-
-
-st.divider()
-
-
-# =========================================================
-# MATCH TREND
-# =========================================================
-
-st.subheader("📈 Match Trend Analysis")
-
-
-if not filtered_matches.empty:
-
-    trend_data = (
-        filtered_matches
-        .copy()
+        .reset_index()
     )
 
-
-    trend_data["MATCH_DATE"] = pd.to_datetime(
-        trend_data["MATCH_DATE"]
+    phase_summary["RUN_RATE"] = (
+        phase_summary["RUNS"] * 6
+        /
+        phase_summary["BALLS"].replace(
+            0,
+            pd.NA
+        )
     )
 
-
-    trend_data = (
-        trend_data
-        .groupby("MATCH_DATE")
-        .size()
-        .reset_index(name="MATCHES")
+    phase_summary["RUN_RATE"] = (
+        phase_summary["RUN_RATE"]
+        .fillna(0)
+        .round(2)
     )
 
-
-    fig = px.line(
-        trend_data,
-        x="MATCH_DATE",
-        y="MATCHES",
-        markers=True,
-        title="Matches Played Over Time"
+    st.dataframe(
+        phase_summary,
+        use_container_width=True,
+        hide_index=True
     )
 
-
-    fig.update_layout(
-        xaxis_title="Match Date",
-        yaxis_title="Number of Matches"
+    fig = px.bar(
+        phase_summary,
+        x="PHASE",
+        y="RUNS",
+        text="RUNS",
+        title="Runs by Match Phase"
     )
-
 
     st.plotly_chart(
         fig,
@@ -488,17 +666,19 @@ if not filtered_matches.empty:
     )
 
 
-st.divider()
-
-
 # =========================================================
-# TEAM PERFORMANCE
+# 3. TEAM / VENUE ANALYSIS
 # =========================================================
 
-st.subheader("🏆 Team Performance")
+elif section == "🏆 Team / Venue Analysis":
 
+    st.header("🏆 Team / Venue Analysis")
 
-if not teams.empty:
+    # -----------------------------------------------------
+    # TEAM PERFORMANCE
+    # -----------------------------------------------------
+
+    st.subheader("🏆 Team Performance")
 
     team_display = teams[
         [
@@ -512,14 +692,10 @@ if not teams.empty:
             "NO_RESULTS",
             "WIN_PERCENTAGE"
         ]
-    ].copy()
-
-
-    team_display = team_display.sort_values(
+    ].sort_values(
         "WINS",
         ascending=False
     )
-
 
     st.dataframe(
         team_display,
@@ -527,347 +703,353 @@ if not teams.empty:
         hide_index=True
     )
 
-
-st.divider()
-
-
-# =========================================================
-# TEAM WIN/LOSS PIE CHART
-# =========================================================
-
-st.subheader("🥧 Overall Team Results")
-
-
-if not teams.empty:
-
-    total_wins = teams["WINS"].sum()
-
-    total_losses = teams["LOSSES"].sum()
-
-    total_no_results = teams["NO_RESULTS"].sum()
-
-
-    result_data = pd.DataFrame(
-        {
-            "RESULT": [
-                "Wins",
-                "Losses",
-                "No Results"
-            ],
-            "COUNT": [
-                total_wins,
-                total_losses,
-                total_no_results
-            ]
-        }
+    fig = px.bar(
+        team_display.sort_values(
+            "WIN_PERCENTAGE"
+        ),
+        x="WIN_PERCENTAGE",
+        y="TEAM_NAME",
+        orientation="h",
+        text="WIN_PERCENTAGE",
+        title="Team Winning Percentage"
     )
 
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
 
-    result_data = result_data[
-        result_data["COUNT"] > 0
-    ]
+    st.divider()
 
+    # -----------------------------------------------------
+    # PERFORMANCE BY FORMAT
+    # -----------------------------------------------------
 
-    if not result_data.empty:
+    st.subheader("🏏 Performance by Format")
 
-        fig = px.pie(
-            result_data,
-            names="RESULT",
-            values="COUNT",
-            hole=0.4,
-            title="Wins vs Losses vs No Results"
+    format_performance = (
+        matches
+        .groupby("FORMAT")
+        .agg(
+            MATCHES=("MATCH_ID", "nunique"),
+            DECIDED_MATCHES=(
+                "WINNER_TEAM_ID",
+                lambda x: x.notna().sum()
+            )
+        )
+        .reset_index()
+    )
+
+    fig = px.bar(
+        format_performance,
+        x="FORMAT",
+        y="MATCHES",
+        text="MATCHES",
+        title="Matches by Format"
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
+
+    # -----------------------------------------------------
+    # WINNING TRENDS
+    # -----------------------------------------------------
+
+    st.subheader("📈 Winning Trends")
+
+    winning_matches = matches[
+        matches["WINNER_TEAM_ID"].notna()
+    ].copy()
+
+    if not winning_matches.empty:
+
+        winning_matches["MATCH_DATE"] = (
+            pd.to_datetime(
+                winning_matches["MATCH_DATE"]
+            )
         )
 
-
-        fig.update_traces(
-            textposition="inside",
-            textinfo="percent+label"
+        winning_trend = (
+            winning_matches
+            .groupby("MATCH_DATE")
+            .size()
+            .reset_index(
+                name="DECIDED_MATCHES"
+            )
         )
 
+        fig = px.line(
+            winning_trend,
+            x="MATCH_DATE",
+            y="DECIDED_MATCHES",
+            markers=True,
+            title="Winning / Decided Match Trend"
+        )
 
         st.plotly_chart(
             fig,
             use_container_width=True
         )
 
+    st.divider()
 
-st.divider()
+    # -----------------------------------------------------
+    # VENUE ANALYSIS
+    # -----------------------------------------------------
 
+    st.subheader("📍 Venue Analysis")
 
-# =========================================================
-# TOP RUN SCORERS
-# =========================================================
-
-st.subheader("🏏 Top Run Scorers")
-
-
-if not players.empty:
-
-    top_runs = (
-        players[
-            [
-                "PLAYER_ID",
-                "FIRST_NAME",
-                "LAST_NAME",
-                "NATIONALITY",
-                "ROLE",
-                "TOTAL_RUNS",
-                "FOURS",
-                "SIXES"
-            ]
-        ]
-        .sort_values(
-            "TOTAL_RUNS",
-            ascending=False
+    venue_data = (
+        matches
+        .groupby("VENUE_ID")
+        .agg(
+            MATCHES=("MATCH_ID", "nunique"),
+            DECIDED_MATCHES=(
+                "WINNER_TEAM_ID",
+                lambda x: x.notna().sum()
+            )
         )
-        .head(10)
-    )
-
-
-    st.dataframe(
-        top_runs,
-        use_container_width=True,
-        hide_index=True
-    )
-
-
-    fig = px.bar(
-        top_runs.sort_values("TOTAL_RUNS"),
-        x="TOTAL_RUNS",
-        y="LAST_NAME",
-        orientation="h",
-        text="TOTAL_RUNS",
-        title="Top 10 Run Scorers"
-    )
-
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
-
-
-st.divider()
-
-
-# =========================================================
-# TOP WICKET TAKERS
-# =========================================================
-
-st.subheader("🎯 Top Wicket Takers")
-
-
-if not players.empty:
-
-    top_wickets = (
-        players[
-            [
-                "PLAYER_ID",
-                "FIRST_NAME",
-                "LAST_NAME",
-                "NATIONALITY",
-                "ROLE",
-                "WICKETS",
-                "BALLS_BOWLED",
-                "RUNS_CONCEDED"
-            ]
-        ]
-        .sort_values(
-            "WICKETS",
-            ascending=False
-        )
-        .head(10)
-    )
-
-
-    st.dataframe(
-        top_wickets,
-        use_container_width=True,
-        hide_index=True
-    )
-
-
-    fig = px.bar(
-        top_wickets.sort_values("WICKETS"),
-        x="WICKETS",
-        y="LAST_NAME",
-        orientation="h",
-        text="WICKETS",
-        title="Top 10 Wicket Takers"
-    )
-
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
-
-
-st.divider()
-
-
-# =========================================================
-# PLAYER RUNS VS WICKETS
-# =========================================================
-
-st.subheader("📊 Player Performance Comparison")
-
-
-if not players.empty:
-
-    comparison = players[
-        [
-            "FIRST_NAME",
-            "LAST_NAME",
-            "TOTAL_RUNS",
-            "WICKETS"
-        ]
-    ].copy()
-
-
-    comparison["PLAYER"] = (
-        comparison["FIRST_NAME"]
-        + " "
-        + comparison["LAST_NAME"]
-    )
-
-
-    fig = px.scatter(
-        comparison,
-        x="TOTAL_RUNS",
-        y="WICKETS",
-        hover_name="PLAYER",
-        size="TOTAL_RUNS",
-        title="Runs vs Wickets"
-    )
-
-
-    fig.update_layout(
-        xaxis_title="Total Runs",
-        yaxis_title="Total Wickets"
-    )
-
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
-
-
-st.divider()
-
-
-# =========================================================
-# BATTING INTENSITY HEATMAP
-# =========================================================
-
-st.subheader("🔥 Batting Intensity Heatmap")
-
-
-@st.cache_data
-def load_deliveries(_conn):
-
-    query = """
-        SELECT
-            MATCH_ID,
-            INNINGS_NO,
-            OVER_NO,
-            BATSMAN_RUNS,
-            TOTAL_RUNS,
-            IS_FOUR,
-            IS_SIX
-        FROM CRICKET_ANALYTICS.SILVER.STG_CRICKET_DELIVERIES
-    """
-
-    return pd.read_sql(query, _conn)
-
-
-deliveries = load_deliveries(conn)
-
-
-if not deliveries.empty:
-
-    heatmap_data = (
-        deliveries
-        .groupby(
-            ["INNINGS_NO", "OVER_NO"]
-        )["TOTAL_RUNS"]
-        .sum()
         .reset_index()
     )
 
+    venue_data = venue_data[
+        venue_data["VENUE_ID"].notna()
+    ]
 
-    fig = px.density_heatmap(
-        heatmap_data,
-        x="OVER_NO",
-        y="INNINGS_NO",
-        z="TOTAL_RUNS",
-        text_auto=True,
-        title="Runs Scored by Over and Innings",
-        labels={
-            "OVER_NO": "Over",
-            "INNINGS_NO": "Innings",
-            "TOTAL_RUNS": "Runs"
-        }
-    )
+    if not venue_data.empty:
 
-
-    fig.update_layout(
-        height=550
-    )
-
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
-
-
-    st.caption(
-        "Higher values indicate greater scoring intensity."
-    )
-
-
-st.divider()
-
-
-# =========================================================
-# RECENT MATCHES
-# =========================================================
-
-st.subheader("🕐 Recent Matches")
-
-
-if not filtered_matches.empty:
-
-    recent_matches = (
-        filtered_matches
-        .sort_values(
-            "MATCH_DATE",
-            ascending=False
+        fig = px.bar(
+            venue_data,
+            x="VENUE_ID",
+            y="MATCHES",
+            text="MATCHES",
+            title="Matches by Venue"
         )
-        .head(10)
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+
+        st.dataframe(
+            venue_data,
+            use_container_width=True,
+            hide_index=True
+        )
+
+    else:
+
+        st.info(
+            "Venue data is not available in the current match dataset."
+        )
+
+    st.divider()
+
+    # -----------------------------------------------------
+    # HOME VS AWAY
+    # -----------------------------------------------------
+
+    st.subheader("🏠 Home vs Away")
+
+    st.info(
+        "Home vs Away analysis requires a home/away indicator "
+        "or venue-country mapping in the source data."
     )
 
+
+# =========================================================
+# 4. BALL-BY-BALL EXPLORER
+# =========================================================
+
+elif section == "🔍 Ball-by-Ball Explorer":
+
+    st.header("🔍 Ball-by-Ball Explorer")
+
+    explorer = deliveries.copy()
+
+    # -----------------------------------------------------
+    # FILTERS
+    # -----------------------------------------------------
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+
+        match_filter = st.selectbox(
+            "Match ID",
+            ["All"]
+            +
+            sorted(
+                explorer["MATCH_ID"]
+                .dropna()
+                .astype(str)
+                .unique()
+                .tolist()
+            )
+        )
+
+    with col2:
+
+        innings_filter = st.selectbox(
+            "Innings",
+            ["All"]
+            +
+            sorted(
+                explorer["INNINGS_NO"]
+                .dropna()
+                .unique()
+                .tolist()
+            )
+        )
+
+    with col3:
+
+        over_filter = st.selectbox(
+            "Over",
+            ["All"]
+            +
+            sorted(
+                explorer["OVER_NO"]
+                .dropna()
+                .unique()
+                .tolist()
+            )
+        )
+
+    with col4:
+
+        wicket_filter = st.selectbox(
+            "Wicket",
+            [
+                "All",
+                "Wicket",
+                "No Wicket"
+            ]
+        )
+
+    # -----------------------------------------------------
+    # APPLY FILTERS
+    # -----------------------------------------------------
+
+    if match_filter != "All":
+
+        explorer = explorer[
+            explorer["MATCH_ID"].astype(str)
+            == match_filter
+        ]
+
+    if innings_filter != "All":
+
+        explorer = explorer[
+            explorer["INNINGS_NO"]
+            == innings_filter
+        ]
+
+    if over_filter != "All":
+
+        explorer = explorer[
+            explorer["OVER_NO"]
+            == over_filter
+        ]
+
+    if wicket_filter == "Wicket":
+
+        explorer = explorer[
+            explorer["IS_WICKET"] == 1
+        ]
+
+    elif wicket_filter == "No Wicket":
+
+        explorer = explorer[
+            explorer["IS_WICKET"] == 0
+        ]
+
+    # -----------------------------------------------------
+    # SUMMARY
+    # -----------------------------------------------------
+
+    c1, c2, c3 = st.columns(3)
+
+    c1.metric(
+        "Deliveries",
+        len(explorer)
+    )
+
+    c2.metric(
+        "Runs",
+        int(explorer["TOTAL_RUNS"].sum())
+    )
+
+    c3.metric(
+        "Wickets",
+        int(explorer["IS_WICKET"].sum())
+    )
+
+    st.divider()
+
+    # -----------------------------------------------------
+    # BALL-BY-BALL TABLE
+    # -----------------------------------------------------
+
+    st.subheader("📋 Delivery Details")
+
+    display_columns = [
+        "DELIVERY_ID",
+        "MATCH_ID",
+        "INNINGS_NO",
+        "OVER_NO",
+        "BALL_NO",
+        "BATTING_TEAM_ID",
+        "BOWLING_TEAM_ID",
+        "STRIKER_PLAYER_ID",
+        "BOWLER_PLAYER_ID",
+        "BATSMAN_RUNS",
+        "WIDES",
+        "NO_BALLS",
+        "TOTAL_RUNS",
+        "IS_WICKET",
+        "DISMISSAL_TYPE",
+        "IS_FOUR",
+        "IS_SIX",
+        "IS_DOT_BALL"
+    ]
 
     st.dataframe(
-        recent_matches,
+        explorer[display_columns],
         use_container_width=True,
         hide_index=True
     )
 
+    # -----------------------------------------------------
+    # EXPORT
+    # -----------------------------------------------------
 
-st.divider()
+    csv_data = explorer[
+        display_columns
+    ].to_csv(
+        index=False
+    ).encode("utf-8")
+
+    st.download_button(
+        label="⬇️ Export Filtered Data",
+        data=csv_data,
+        file_name="cricket_ball_by_ball.csv",
+        mime="text/csv"
+    )
 
 
 # =========================================================
 # FOOTER
 # =========================================================
 
+st.divider()
+
 st.success(
-    "✅ Cricket Analytics Dashboard loaded successfully! 🏏"
+    "✅ Cricket Analytics Dashboard loaded successfully!"
 )
 
 st.caption(
-    "Built using Snowflake + dbt + Streamlit + Python + Plotly"
+    "Snowflake + dbt + Airflow + Python + Streamlit + Plotly"
 )
