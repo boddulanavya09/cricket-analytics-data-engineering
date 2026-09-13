@@ -1,2 +1,2 @@
 SELECT *
-FROM {{ ref('cricket_deliveries') }}
+FROM CRICKET_ANALYTICS.BRONZE.CRICKET_DELIVERIES

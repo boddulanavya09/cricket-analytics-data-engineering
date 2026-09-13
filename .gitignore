@@ -31,3 +31,12 @@ profiles.yml
 # OS files
 .DS_Store
 Thumbs.db
+# Streamlit secrets
+.streamlit/
+src/.streamlit/
+
+# Project logs
+logs/
+
+# Temporary Bronze loading script
+cricket_dbt/scripts/

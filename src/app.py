@@ -847,16 +847,7 @@ elif section == "🏆 Team / Venue Analysis":
 
     st.divider()
 
-    # -----------------------------------------------------
-    # HOME VS AWAY
-    # -----------------------------------------------------
-
-    st.subheader("🏠 Home vs Away")
-
-    st.info(
-        "Home vs Away analysis requires a home/away indicator "
-        "or venue-country mapping in the source data."
-    )
+    
 
 
 # =========================================================

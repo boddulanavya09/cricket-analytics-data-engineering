@@ -20,11 +20,19 @@ with DAG(
         ),
     )
 
+    dbt_seed = BashOperator(
+        task_id="dbt_seed",
+        bash_command=(
+            "dbt seed --full-refresh "
+            "--project-dir /opt/airflow/dbt_project "
+            "--profiles-dir /opt/airflow/dbt_profiles"
+        ),
+    )
+
     dbt_run = BashOperator(
         task_id="dbt_run",
         bash_command=(
-            "dbt run "
-            "--no-partial-parse "
+            "dbt run --no-partial-parse "
             "--project-dir /opt/airflow/dbt_project "
             "--profiles-dir /opt/airflow/dbt_profiles"
         ),
@@ -33,11 +41,10 @@ with DAG(
     dbt_test = BashOperator(
         task_id="dbt_test",
         bash_command=(
-           "dbt test "
-           "--no-partial-parse "
-           "--project-dir /opt/airflow/dbt_project "
-           "--profiles-dir /opt/airflow/dbt_profiles"
+            "dbt test --no-partial-parse "
+            "--project-dir /opt/airflow/dbt_project "
+            "--profiles-dir /opt/airflow/dbt_profiles"
         ),
     )
 
-    dbt_debug >> dbt_run >> dbt_test
+    dbt_debug >> dbt_seed >> dbt_run >> dbt_test

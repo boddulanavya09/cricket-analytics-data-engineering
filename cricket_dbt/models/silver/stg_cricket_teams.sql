@@ -1,2 +1,2 @@
 SELECT *
-FROM {{ ref('cricket_teams') }}
+FROM CRICKET_ANALYTICS.BRONZE.CRICKET_TEAMS

@@ -61,3 +61,4 @@ LEFT JOIN batting b
 
 LEFT JOIN bowling w
     ON p.PLAYER_ID = w.PLAYER_ID
+    
